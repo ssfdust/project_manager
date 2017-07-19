@@ -1,16 +1,22 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import login from '../pages/login'
+import container from '../components/Hello'
 
 Vue.use(Router)
 
 export default new Router({
   routes: [
     {
-      path: '/',
+      path: '/login',
       name: 'login',
       hide: true,
       component: login
+    },
+    {
+      path: '/containers',
+      name: 'hello',
+      component: container
     }
   ]
 })
