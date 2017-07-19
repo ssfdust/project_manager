@@ -15,33 +15,12 @@ Vue.config.productionTip = false
 Vue.use(ElementUI)
 Vue.use(VueCookie)
 
-function getCookie (name) {
-  var cookieValue = null
-  if (document.cookie && document.cookie !== '') {
-    var cookies = document.cookie.split(';')
-    for (var i = 0; i < cookies.length; i++) {
-      var cookie = cookies[i]
-      // Does this cookie string begin with the name we want?
-      if (cookie.substring(0, name.length + 1) === (name + '=')) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1))
-        break
-      }
-    }
-  }
-  return cookieValue
+export const get_user = function () {
+  return localStorage.getItem('user')
 }
 
-function get_auth_status () {
-  var ret = false
-  var t = getCookie('sessionid')
-  console.log(t)
-  if (getCookie('sessionid') !== null) {
-    ret = true
-  }
-  return ret
-}
 router.beforeEach((to, from, next) => {
-  var is_auth = get_auth_status()
+  var is_auth = get_user()
   console.log('router function')
   if (to.path === '/login' && is_auth) {
     next({path: '/containers'})

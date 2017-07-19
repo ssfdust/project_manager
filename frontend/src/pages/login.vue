@@ -60,8 +60,10 @@ export default {
         data: params,
         headers: {'X-CSRFTOKEN': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded'}
       }).then(function (response) {
-        if (response.data['msg'] === 'login success') {
-          self.$router.push({ path: '/hello' })
+        if (response.data['status'] === 'login success') {
+          var userid = response.data['user']
+          localStorage.setItem('user', userid)
+          self.$router.push({ path: '/containers' })
         } else if (response.data['msg'] === 'Wrong username or password') {
           self.$message('用户名密码错误')
           self.login.captcha_img = response.data['img_src']

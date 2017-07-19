@@ -28,6 +28,7 @@ def login(request):
             if user is not None:
                 auth_login(request, user)
                 respon['status'] = 'login success'
+                respon['user'] = username
                 return JsonResponse(respon)
             else:
                 respon['status'] = 'login failed'
