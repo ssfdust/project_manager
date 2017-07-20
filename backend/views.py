@@ -85,17 +85,28 @@ def get_frontend_status(request):
         if form.is_valid():
             filename = form.data['filename']
             action = form.data['action']
+            if 'page' in form.data:
+                page = form.data['page']
             path = frontend_path
             # frontend return a dict object
             # it contains a list object called
             # files which includes three properties
             # for each element.
             # files:[
-            # ['filename1', '2003-01-03 23:56:23', False]
-            # ['filename2', '2003-01-03 23:56:23', False]
+            #     ['filename1', '2003-01-03 23:56:23', False],
+            #     ['filename2', '2003-01-03 23:56:23', False],
             # ....
             # ]
-            ret = frontend_file_handler(path, filename, action)
-            respon['result'] = ret
+            # metadata: {
+            #     file_num: 180
+            #}
+            ret = frontend_file_handler(frontend_path, filename, action)
+    else:
+        ret = frontend_file_handler(frontend_path, '', 'get')
 
+    respon['files'] = ret['files'][page*10:page*10+1]
+    respon['page'] = page
+    respon['status'] = success
+    return JsonResponse(respon)
+    
 

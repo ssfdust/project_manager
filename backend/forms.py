@@ -10,4 +10,5 @@ class LoginForm(forms.Form):
 class FrontendActionForm(forms.Form):
     filename = forms.CharField(max_length=30)
     action = forms.CharField(max_length=30)
-    upload = forms.FileField(allow_empty_file=True)
+    page = forms.IntegerField(required=False)
+    upload = forms.FileField(allow_empty_file=True, required=False)
