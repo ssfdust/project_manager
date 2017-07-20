@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import login from '../pages/login'
-import container from '../components/Hello'
+import container from '../components/head'
 
 Vue.use(Router)
 

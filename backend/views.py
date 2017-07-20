@@ -5,7 +5,10 @@ from captcha.helpers import captcha_image_url
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login as auth_login
 from django.views.decorators.csrf import ensure_csrf_cookie,csrf_exempt
+from backend.confparse import get_config
+from backend.filemanager import FrontendFileStatus, frontend_file_handler
 import logging
+import os
 import json
 import re
 
@@ -24,6 +27,8 @@ def login(request):
             logger.debug('captcha verified')
             username = form.data['username']
             password = form.data['password']
+            if form.data['remember'] == "false":
+                request.session.set_expiry(0)
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 auth_login(request, user)
@@ -44,20 +49,53 @@ def login(request):
             respon['msg'] = 'Wrong captcha input'
             return JsonResponse(respon)
     else:
-        logger.debug('get captcha_image_url')
         respon = dict()
-        respon['status'] = 'log in'
-        respon['captcha_0'] = CaptchaStore.generate_key()
-        respon['img_src'] = captcha_image_url(respon['captcha_0'])
-        logger.info(respon)
+        if request.user.is_authenticated:
+            respon['status'] = 'login success'
+            respon['user'] = request.user.get_username()
+            logger.info('the user has logined in')
+        else:
+            logger.debug('get captcha_image_url')
+            respon['status'] = 'log in'
+            respon['captcha_0'] = CaptchaStore.generate_key()
+            respon['img_src'] = captcha_image_url(respon['captcha_0'])
+            logger.info(respon)
         return JsonResponse(respon)
 
 def is_login(request):
     respon = dict()
     if request.user.is_authenticated:
         respon['status'] = 'login'
-        logger.debug('The response is '% respon)
+        respon['user'] = request.user.get_username()
+        logger.debug('The response is %s'% respon)
+        logger.info('Some one has logged in')
     else:
         response['status'] = 'logout'
+        logger.info('Some one has not logged in')
     return JsonResponse(respon)
+
+def get_frontend_status(request):
+    respon = dict()
+    config = get_config()
+    frontend_path = config['frontend']
+    frontedn_fs = FrontendFileStatus()
+    if request.method == 'POST':
+        logger.info('get_frontend_status api get a request')
+        form = FrontendActionForm(request.POST)
+        if form.is_valid():
+            filename = form.data['filename']
+            action = form.data['action']
+            path = frontend_path
+            # frontend return a dict object
+            # it contains a list object called
+            # files which includes three properties
+            # for each element.
+            # files:[
+            # ['filename1', '2003-01-03 23:56:23', False]
+            # ['filename2', '2003-01-03 23:56:23', False]
+            # ....
+            # ]
+            ret = frontend_file_handler(path, filename, action)
+            respon['result'] = ret
+
 

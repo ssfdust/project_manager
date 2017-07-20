@@ -51,7 +51,7 @@ export default {
 
       params.append('username', self.login.username)
       params.append('password', self.login.password)
-      params.append('captcha_0', self.$data.captcha_0_value)
+      params.append('captcha_0', self.$data.captcha_0)
       params.append('captcha_1', self.login.captcha)
       params.append('remember', self.login.remember)
       this.$ajax({
@@ -62,39 +62,48 @@ export default {
       }).then(function (response) {
         if (response.data['status'] === 'login success') {
           var userid = response.data['user']
-          localStorage.setItem('user', userid)
+          sessionStorage.user = userid
           self.$router.push({ path: '/containers' })
         } else if (response.data['msg'] === 'Wrong username or password') {
           self.$message('用户名密码错误')
           self.login.captcha_img = response.data['img_src']
-          self.$data.captcha_0_value = response.data['captcha_0']
+          self.$data.captcha_0 = response.data['captcha_0']
         } else if (response.data['msg'] === 'Wrong captcha input') {
           self.$message('验证码错误')
           self.login.captcha_img = response.data['img_src']
-          self.$data.captcha_0_value = response.data['captcha_0']
+          self.$data.captcha_0 = response.data['captcha_0']
         }
       })
     },
     refresh_cap () {
       var self = this
       this.$ajax.get('/login/').then(function (response) {
-        for (var item in response.data) {
-          if (item === 'img_src') {
-            self.login.captcha_img = response.data[item]
-            self.$data.captcha_0_value = response.data['captcha_0']
-          }
-        }
+        self.login.captcha_img = response.data['img_src']
+        self.$data.captcha_0 = response.data['captcha_0']
       })
     }
+  },
+  ready () {
+    const self = this
+    console.log('ready to load page')
+    this.$ajax.get('/islogin/').then(function (response) {
+      if (response.data['status'] === 'login success') {
+        var userid = response.data['user']
+        sessionStorage.user = userid
+        self.$router.push('/containers/')
+      }
+    })
   },
   mounted () {
     var self = this
     this.$ajax.get('/login/').then(function (response) {
-      for (var item in response.data) {
-        if (item === 'img_src') {
-          self.login.captcha_img = response.data[item]
-          self.$data.captcha_0_value = response.data['captcha_0']
-        }
+      if (response.data['status'] === 'login success') {
+        var userid = response.data['user']
+        sessionStorage.user = userid
+        self.$router.push('/containers/')
+      } else {
+        self.login.captcha_img = response.data['img_src']
+        self.$data.captcha_0 = response.data['captcha_0']
       }
     })
   },

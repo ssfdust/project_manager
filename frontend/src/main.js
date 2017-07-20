@@ -16,17 +16,16 @@ Vue.use(ElementUI)
 Vue.use(VueCookie)
 
 export const get_user = function () {
-  return localStorage.getItem('user')
+  return sessionStorage.user
 }
 
 router.beforeEach((to, from, next) => {
-  var is_auth = get_user()
-  console.log('router function')
-  if (to.path === '/login' && is_auth) {
-    next({path: '/containers'})
+  var is_auth = true // get_user()
+  if (to.path === '/login/' && is_auth) {
+    next({path: '/containers/'})
   }
-  if (!is_auth && to.path !== '/login') {
-    next({path: '/login'})
+  if (!is_auth && to.path !== '/login/') {
+    next({path: '/login/'})
   } else {
     next()
   }

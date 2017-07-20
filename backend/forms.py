@@ -6,3 +6,8 @@ class LoginForm(forms.Form):
     password = forms.CharField(max_length=30)
     remember = forms.BooleanField(False)
     captcha = CaptchaField()
+
+class FrontendActionForm(forms.Form):
+    filename = forms.CharField(max_length=30)
+    action = forms.CharField(max_length=30)
+    upload = forms.FileField(allow_empty_file=True)
