@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from backend.forms import LoginForm
+from backend.forms import LoginForm, FrontendActionForm
 from captcha.models import CaptchaStore
 from captcha.helpers import captcha_image_url
 from django.http import JsonResponse
@@ -7,6 +7,8 @@ from django.contrib.auth import authenticate, login as auth_login
 from django.views.decorators.csrf import ensure_csrf_cookie,csrf_exempt
 from backend.confparse import get_config
 from backend.filemanager import FrontendFileStatus, frontend_file_handler
+from math import ceil
+import time
 import logging
 import os
 import json
@@ -78,16 +80,24 @@ def get_frontend_status(request):
     respon = dict()
     config = get_config()
     frontend_path = config['frontend']
-    frontedn_fs = FrontendFileStatus()
     if request.method == 'POST':
         logger.info('get_frontend_status api get a request')
-        form = FrontendActionForm(request.POST)
+        form = FrontendActionForm(request.POST, request.FILES)
         if form.is_valid():
             filename = form.data['filename']
             action = form.data['action']
-            if 'page' in form.data:
-                page = form.data['page']
+            page = int(form.data['page'])
             path = frontend_path
+            if action == 'upload':
+                real_time = time.strftime('%Y-%m-%d',time.localtime(time.time()))
+                upload_file = request.FILES['file']
+                filename = 'frontend' + real_time + '.zip'
+                action = 'active'
+                file_save = os.path.join(frontend_path, filename)
+                with open(file_save, 'wb+') as f:
+                    for chunk in upload_file.chunks():
+                        f.write(chunk)
+
             # frontend return a dict object
             # it contains a list object called
             # files which includes three properties
@@ -102,11 +112,12 @@ def get_frontend_status(request):
             #}
             ret = frontend_file_handler(frontend_path, filename, action)
     else:
+        page = int(request.GET['page'])
         ret = frontend_file_handler(frontend_path, '', 'get')
 
-    respon['files'] = ret['files'][page*10:page*10+1]
-    respon['page'] = page
-    respon['status'] = success
+    respon['files'] = ret['files'] if len(ret['files']) == 0 else ret['files'][(page - 1) * 10: (page - 1)* 10 + 1 ]
+    respon['pages'] = ceil(len(ret['files']) / 10)
+    respon['status'] = 'success'
     return JsonResponse(respon)
     
 
