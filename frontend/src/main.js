@@ -20,9 +20,9 @@ export const get_user = function () {
 }
 
 router.beforeEach((to, from, next) => {
-  var is_auth = true // get_user()
+  var is_auth = get_user()
   if (to.path === '/login/' && is_auth) {
-    next({path: '/containers/'})
+    next({path: '/frontend/'})
   }
   if (!is_auth && to.path !== '/login/') {
     next({path: '/login/'})

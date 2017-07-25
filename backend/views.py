@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.contrib.auth import authenticate, login as auth_login
 from django.views.decorators.csrf import ensure_csrf_cookie,csrf_exempt
 from backend.confparse import CONFIG
-from backend.filemanager import FrontendFileStatus, frontend_file_handler
+from backend.filemanager import FrontendFileStatus, file_handler
 from math import ceil
 import time
 import logging
@@ -109,13 +109,13 @@ def get_frontend_status(request):
             # metadata: {
             #     file_num: 180
             #}
-            ret = frontend_file_handler(frontend_path, filename, action)
+            #ret = frontend_file_handler(frontend_path, filename, action)
     else:
         page = int(request.GET['page'])
-        ret = frontend_file_handler(frontend_path, '', 'get')
+        #ret = frontend_file_handler(frontend_path, '', 'get')
 
-    respon['files'] = ret['files'] if len(ret['files']) == 0 else ret['files'][(page - 1) * 10: (page - 1)* 10 + 1 ]
-    respon['pages'] = ceil(len(ret['files']) / 10)
+    #respon['files'] = ret['files'] if len(ret['files']) == 0 else ret['files'][(page - 1) * 10: (page - 1)* 10 + 1 ]
+    #respon['pages'] = ceil(len(ret['files']) / 10)
     respon['status'] = 'success'
     return JsonResponse(respon)
     

@@ -29,88 +29,88 @@
 </template>
 
 <script>
-export default {
-  name: 'login',
-  data () {
-    return {
-      msg: 'Welcome to Your Docker Manager',
-      login: {
-        username: '',
-        password: '',
-        captcha: '',
-        remember: false,
-        captcha_img: ''
+  export default {
+    name: 'login',
+    data () {
+      return {
+        msg: 'Welcome to Your Docker Manager',
+        login: {
+          username: '',
+          password: '',
+          captcha: '',
+          remember: false,
+          captcha_img: ''
+        }
       }
-    }
-  },
-  methods: {
-    submit () {
-      var csrftoken = this.$cookie.get('csrftoken')
-      var params = new URLSearchParams()
-      var self = this
+    },
+    methods: {
+      submit () {
+        var csrftoken = this.$cookie.get('csrftoken')
+        var params = new URLSearchParams()
+        var self = this
 
-      params.append('username', self.login.username)
-      params.append('password', self.login.password)
-      params.append('captcha_0', self.$data.captcha_0)
-      params.append('captcha_1', self.login.captcha)
-      params.append('remember', self.login.remember)
-      this.$ajax({
-        method: 'post',
-        url: '/login/',
-        data: params,
-        headers: {'X-CSRFTOKEN': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded'}
-      }).then(function (response) {
+        params.append('username', self.login.username)
+        params.append('password', self.login.password)
+        params.append('captcha_0', self.$data.captcha_0)
+        params.append('captcha_1', self.login.captcha)
+        params.append('remember', self.login.remember)
+        this.$ajax({
+          method: 'post',
+          url: '/login/',
+          data: params,
+          headers: {'X-CSRFTOKEN': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded'}
+        }).then(function (response) {
+          if (response.data['status'] === 'login success') {
+            var userid = response.data['user']
+            sessionStorage.user = userid
+            self.$router.push({ path: '/containers' })
+          } else if (response.data['msg'] === 'Wrong username or password') {
+            self.$message('用户名密码错误')
+            self.login.captcha_img = response.data['img_src']
+            self.$data.captcha_0 = response.data['captcha_0']
+          } else if (response.data['msg'] === 'Wrong captcha input') {
+            self.$message('验证码错误')
+            self.login.captcha_img = response.data['img_src']
+            self.$data.captcha_0 = response.data['captcha_0']
+          }
+        })
+      },
+      refresh_cap () {
+        var self = this
+        this.$ajax.get('/login/').then(function (response) {
+          self.login.captcha_img = response.data['img_src']
+          self.$data.captcha_0 = response.data['captcha_0']
+        })
+      }
+    },
+    ready () {
+      const self = this
+      console.log('ready to load page')
+      this.$ajax.get('/islogin/').then(function (response) {
         if (response.data['status'] === 'login success') {
           var userid = response.data['user']
           sessionStorage.user = userid
-          self.$router.push({ path: '/containers' })
-        } else if (response.data['msg'] === 'Wrong username or password') {
-          self.$message('用户名密码错误')
-          self.login.captcha_img = response.data['img_src']
-          self.$data.captcha_0 = response.data['captcha_0']
-        } else if (response.data['msg'] === 'Wrong captcha input') {
-          self.$message('验证码错误')
+          self.$router.push('/frontend/')
+        }
+      })
+    },
+    mounted () {
+      var self = this
+      this.$ajax.get('/login/').then(function (response) {
+        if (response.data['status'] === 'login success') {
+          var userid = response.data['user']
+          sessionStorage.user = userid
+          self.$router.push('/frontend/')
+        } else {
           self.login.captcha_img = response.data['img_src']
           self.$data.captcha_0 = response.data['captcha_0']
         }
       })
     },
-    refresh_cap () {
-      var self = this
-      this.$ajax.get('/login/').then(function (response) {
-        self.login.captcha_img = response.data['img_src']
-        self.$data.captcha_0 = response.data['captcha_0']
-      })
+    props: {
+      captcha_0: ''
     }
-  },
-  ready () {
-    const self = this
-    console.log('ready to load page')
-    this.$ajax.get('/islogin/').then(function (response) {
-      if (response.data['status'] === 'login success') {
-        var userid = response.data['user']
-        sessionStorage.user = userid
-        self.$router.push('/containers/')
-      }
-    })
-  },
-  mounted () {
-    var self = this
-    this.$ajax.get('/login/').then(function (response) {
-      if (response.data['status'] === 'login success') {
-        var userid = response.data['user']
-        sessionStorage.user = userid
-        self.$router.push('/containers/')
-      } else {
-        self.login.captcha_img = response.data['img_src']
-        self.$data.captcha_0 = response.data['captcha_0']
-      }
-    })
-  },
-  props: {
-    captcha_0: ''
   }
-}
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
