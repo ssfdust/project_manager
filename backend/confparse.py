@@ -8,3 +8,4 @@ def get_config(config_file='/etc/docker_manager/config.json'):
         config = json.loads(f.read())
     return config
 
+CONFIG = get_config()

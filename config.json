@@ -1,0 +1,12 @@
+{
+    "frontend":{
+        "upload":"/home/ssfdust/website/project_manager/uploads/frontend",
+        "workpath":"/tmp/frontend",
+        "container":"233333"
+    },
+    "backend":{
+        "upload":"/home/ssfdust/website/project_manager/uploads/backend/",
+        "workpath":"/tmp/backend",
+        "container":"233333"
+    }
+}

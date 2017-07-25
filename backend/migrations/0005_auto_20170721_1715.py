@@ -4,12 +4,11 @@ from __future__ import unicode_literals
 
 from django.db import migrations
 
-from backend.confparse import get_config
+from backend.confparse import CONFIG
 import time
 import logging
 import os
 
-logger = logging.getLogger('django')
 def forwards_func(apps, schema_editor):
     """
     We need to list all the files and
@@ -30,37 +29,35 @@ def forwards_func(apps, schema_editor):
     """
     # We get the model from the versioned app registry;
     # if we directly import it, it'll be the wrong version
-    frontend_list = list()
-    backend_list = list()
-    frontend_path = get_config()['frontend']
-    backend_path = get_config()['backend']
+    frontend_path = CONFIG['frontend']['uploads']
+    backend_path = CONFIG['backend']['uploads']
     FrontendFileStatusModel = apps.get_model("backend", "FrontendFileStatusModel")
     BackendFileStatusModel = apps.get_model("backend", "BackendFileStatusModel")
 
     for filename in os.listdir(frontend_path):
         rel_f_path = os.path.join(frontend_path, filename)
         file_mt = get_file_mtime(rel_f_path)
-        frontend_list.append(FrontendFileStatusModel(
-            filename=filename,
-            modified_date=file_mt,
-            enabled_date=file_mt,
-            in_use=False
-        ))
+        model = FrontendFileStatusModel.objects.create(filename=filename, 
+                                               modified_date=file_mt,
+                                               enabled_date=file_mt,
+                                               in_use=False)
+        model.modified_date = file_mt
+        model.enabled_date = file_mt
+        model.save()
 
     for filename in os.listdir(backend_path):
         rel_f_path = os.path.join(backend_path, filename)
         file_mt = get_file_mtime(rel_f_path)
-        backend_list.append(BackendFileStatusModel(
-            filename=filename,
-            modified_date=file_mt,
-            enabled_date=file_mt,
-            in_use=False
-        ))
+        model = BackendFileStatusModel.objects.create(filename=filename,
+                                               modified_date=file_mt,
+                                               enabled_date=file_mt,
+                                               in_use=False)
+        model.modified_date = file_mt
+        model.enabled_date = file_mt
+        model.save()
 
     db_alias = schema_editor.connection.alias
 
-    FrontendFileStatusModel.objects.using(db_alias).bulk_create(frontend_list)
-    BackendFileStatusModel.objects.using(db_alias).bulk_create(backend_list)
 
 def reverse_func(apps, schema_editor):
     # forwards_func() creates two Country instances,

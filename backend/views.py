@@ -5,7 +5,7 @@ from captcha.helpers import captcha_image_url
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login as auth_login
 from django.views.decorators.csrf import ensure_csrf_cookie,csrf_exempt
-from backend.confparse import get_config
+from backend.confparse import CONFIG
 from backend.filemanager import FrontendFileStatus, frontend_file_handler
 from math import ceil
 import time
@@ -78,8 +78,7 @@ def is_login(request):
 
 def get_frontend_status(request):
     respon = dict()
-    config = get_config()
-    frontend_path = config['frontend']
+    frontend_path = CONFIG['frontend']['uploads']
     if request.method == 'POST':
         logger.info('get_frontend_status api get a request')
         form = FrontendActionForm(request.POST, request.FILES)

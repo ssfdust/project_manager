@@ -1,9 +1,13 @@
-import os
 from backend.models import FrontendFileStatusModel, BackendFileStatusModel
 from django.utils import timezone
+from backend.confparse import CONFIG
 import time
 import datetime
+from zipfile import ZipFile
+from math import ceil
+import shutil
 import logging
+import os
 import pytz
 
 logger = logging.getLogger('django')
@@ -21,6 +25,13 @@ class FrontendFileStatus(object):
                         with the timezone.now function.
     :in_use:       similar updated way along with the enabled_date 
     """
+    @property
+    def file_total(self):
+        " return the total number of files"
+        file_number = FrontendFileStatusModel.objects.count()
+
+        return file_number
+
 
     def get_filestatus(self, page):
         """
@@ -88,7 +99,7 @@ class FrontendFileStatus(object):
     @set_filestatus.setter
     def set_filestatus(self, file_status):
         try:
-            # Verify input
+            # Verify input, uncompress the data into the variables
             filename, modified_date, enabled_date, in_use = file_status
         except ValueError:
             raise ValueError('Pass an iterable with two items')
@@ -103,6 +114,7 @@ class FrontendFileStatus(object):
             elif not file_in_use_q.exists():
                 logger.info('no frontend file enabled')
 
+            # create a new file
             new_file, created = FrontendFileStatusModel.objects.get_or_create(filename=filename)
             now = timezone.localtime().strftime('%Y-%m-%d %H:%M:%S')
             new_file.modified_date = modified_date
@@ -134,6 +146,12 @@ class BackendFileStatus(object):
                         with the timezone.now function.
     :in_use:       similar updated way along with the enabled_date 
     """
+    @property
+    def file_total(self):
+        " return the total number of files"
+        file_number = FrontendFileStatusModel.objects.count()
+
+        return file_number
 
     def get_filestatus(self, page):
         """
@@ -233,77 +251,106 @@ class BackendFileStatus(object):
                 logger.debug(now)
             new_file.save()
 
-def frontend_file_handler(path, filename, action, page=None):
+def file_handler(kind, path, filename, action, page):
     """
-    We need to list all the files and
-    store the file status from the file
-    to the database with the following
-    options
-    
-    for the first time, we assume the create time
-    as the enabled time.
-    
-    we verify whether a file exists via database
-    get_or_create function.
-    if the database column exists, we know the file
-    has been added before.otherwise, we will verify the
-    modified time of the file to update the modified time.
-    If the column is not existed, we will add the column
-    with the modified time as the enabled time.
+    we use a dictionary object to handler the file
+    action.It contains four kinds of operation.
+    : active_action:if the target is existed and set the 
+                    active flag to the database.
+                    if the target is not existed, create
+                    a row in the database and active it.
+                    when receive a new file, this is the
+                    default action for the new file.
+    : get_action: get the filelist
+    : delete_action: delete the file and data in database.
+
+    the function will return a dictionary contains a two elements,
+    one for "filelist", the other for "metadata".
+    : return: a dictionary object.
+    : filelist: a list of list which contains file info.
+    : metadata: : page: the current page according to request.
+                : total: the number of all the files.
+                : all_pages: the total page number.
+
     """
-    frontend_fs = FrontendFileStatus()
     fileret = dict()
-    filelist = list()
-    def delete_action(filename, path):
-        pass
-    def stop_action(filename, path):
-        fileobj = dict()
-        file_st = frontend_fs.filestatus
-
-        if not file_st['filename']:
-            logger.warning('No frontend file enabled, so nothing to do here')
+    def delete_action():
+        top_file_info = file_status.get_filestatus(1)[0]
+        if top_file_info[0] == filename and \
+                top_file_info[2] == True:
+                logger.warning('attemp to remove a file in use and failed')
+                return False
+        rel_f = os.path.join(path, filename)
+        try:
+            os.remove(rel_f)
+        except FileNotFoundError:
+            logger.error('file %s not found' % rel_f)
             return False
-        #TODO clear directory
-        logger.info('Now empty the frontend directory for file %s' % filename)
-        frontend_fs.filestatus = (filename, False)
+        except PermissionError:
+            logger.error('you have no permission on that file')
+            return False
+        except:
+            logger.error('unknown reason, cannot remove file %s' % rel_f)
+            return False
+        else:
+            file_status.delete_filestatus(filename)
         return True
 
-    def active_action(filename, path):
-        fileobj = dict()
-        file_st = frontend_fs.filestatus
-        #TODO clear the target directory and unzip the target file
-        logger.info('Now active frontend file, unzip file %s' % filename)
-        frontend_fs.filestatus = (filename, True)
+    def active_action():
+
+        # clear the target directory and unzip the target file
+        try:
+            rel_f = os.path.join(path, filename)
+            shutil.rmtree(CONFIG[kind]['workpath'])
+            os.mkdir(CONFIG[kind]['workpath'])
+            zip_in = ZipFile(rel_f)
+            zip_in.extractall(path=CONFIG[kind]['workpath'])
+            zip_in.close()
+            logger.info('Now active frontend file, unzip file %s' % filename)
+        except PermissionError:
+            logger.error('Permission denied on creating file')
+            return False
+        except FileNotFoundError:
+            if not os.path.exists(rel_f):
+                logger.error('the zip file %s is not found' % rel_f)
+            elif not os.path.exists(CONFIG[kind]['workpath']):
+                logger.error('the workpath %s is not found' % CONFIG[kind]['workpath'] )
+            return False
+        except:
+            logger.error('unknown error detected')
+            return False
+        else:
+            # set the flag in the database
+            now = timezone.localtime()
+            _file_mt = time.localtime(os.stat(rel_f).st_mtime)
+            file_mt = time.strftime('%Y-%m-%d %H:%M:%S', _file_mt)
+            file_status.set_filestatus = (filename, file_mt, now, True)
         return True
 
-    def get_action(filename, path):
-        file_st = frontend_fs.filestatus 
-        logger.info('Get the active file, the file is %s' % file_st['filename'])
-        return file_st
-
-    functions = {
-        'get': get_action,
-        'active':active_action,
-        'stop': stop_action
-    }
-    func = functions[action]
-    ret = func(filename, path)
-    active_filename = frontend_fs.filestatus['filename']
-    logger.info(active_filename)
-    if ret == False:
-        logger.warning('file action failed')
+    def get_action():
+        file_list = file_status.get_filestatus(page)
+        logger.debug('Get the active file, the file is %s' % file_list)
+        return file_list
+    if kind == 'frontend':
+        logger.info('receive request for frontend')
+        file_status = FrontendFileStatus()
+    elif kind == 'backend':
+        logger.info('receive request for backend')
+        file_status = BackendFileStatus()
+    else:
+        logger.error('the file request not match anything')
         return None
-    for f in os.listdir(path):
-        active = False
-        rel_f = os.path.join(path, f)
-        #get the create time
-        _file_mt = time.localtime(os.stat(rel_f).st_mtime)
-        file_mt = time.strftime('%Y-%m-%d %H-%M-%d', _file_mt)
-        if f == active_filename:
-            active = True
-        filelist.append([f, file_mt, active])
-    filelist.sort(key=lambda x:x[2], reverse=True)
-    fileret['files'] = filelist
-    fileret['metadata'] = {'file_num':len(os.listdir(path))}
-    
+    actions = {
+        "delete": delete_action,
+        "active": active_action
+    }
+    if action in actions: 
+        actions[action]()
+    # At last, we get the file status
+    fileret['filelist'] = get_action()
+    fileret['metadata'] = dict()
+    fileret['metadata']['total'] = file_status.file_total
+    fileret['metadata']['page'] = page if page else 1
+    fileret['metadata']['all_page'] = ceil(file_status.file_total / 10)
+
     return fileret
